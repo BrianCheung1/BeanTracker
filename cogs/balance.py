@@ -49,8 +49,9 @@ class Balance(commands.Cog, name="Balance"):
                     print("added to database")
                     result = await cursor.fetchone()
                 try:
-                    db.execute("UPDATE users SET beans=beans+1 WHERE user_id =?", (interaction.user.id,))
+                    await db.execute("UPDATE users SET beans=beans+1 WHERE user_id =?", (interaction.user.id,))
                     await db.commit()
+                    cursor = await db.execute("SELECT * FROM users WHERE user_id =?", (interaction.user.id,)) 
                     result = await cursor.fetchone()
                     print("updated database")
                     await interaction.response.send_message(result)
