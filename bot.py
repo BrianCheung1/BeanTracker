@@ -2,9 +2,11 @@ import discord
 import os
 import platform
 import asyncio
+import aiosqlite
 from dotenv import load_dotenv
 from discord.ext.commands import Bot
 from discord.ext import commands
+
 
 load_dotenv()
 
@@ -51,6 +53,13 @@ async def load_cogs() -> None:
                 exception = f"{type(e).__name__}: {e}"
                 print(f"Failed to load extension {extension}\n{exception}")
 
+async def load_db():
+    async with aiosqlite.connect('users.db') as db:
+        with open(f"{os.path.realpath(os.path.dirname(__file__))}/database/schema.sql") as file:
+            print(file.read())
+            await db.executescript(file.read())
+        await db.commit()
 
+asyncio.run(load_db())
 asyncio.run(load_cogs())
 bot.run(token)

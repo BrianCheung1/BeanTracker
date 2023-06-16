@@ -11,59 +11,53 @@ class Balance(commands.Cog, name="Balance"):
         self.bot = bot
 
     @app_commands.command()
-    async def Balance(
+    async def balance(
         self,
         interaction: discord.Interaction,
     ):
         """Connect to DB and add urself as user"""
-        db = await aiosqlite.connect("mydatabase.db")
 
-        # Execute a SQL query to create a table
-        await db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT UNIQUE,
-                username TEXT,
-                beans INTEGER)"""
-        )
+        async with aiosqlite.connect("users.db") as db:
+            async with db.execute("SELECT * FROM users WHERE user_id =?", (interaction.user.id,)) as cursor:
+                result = await cursor.fetchone()
+                if not result:
+                    await db.execute("INSERT INTO users (user_id, username, beans) VALUES(?,?,?)", (interaction.user.id, interaction.user.name, 5))
+                    await db.commit()
+                    print("added to database")
+                    result = await cursor.fetchone()
+                try:
+                    print(result)
+                    await interaction.response.send_message(result)
+                except Exception as e:
+                    print(e)
+                    await interaction.response.send_message(e)
 
-        data = (interaction.user.id, interaction.user.name, 5)
-
-        # Execute multiple SQL queries to insert data
-        insert_query = "INSERT INTO users (user_id, username, beans) VALUES (?, ?, ?)"
-        find_query = f"SELECT user_id FROM users WHERE user_id = {interaction.user.id}"
-        try:
-            await db.execute(insert_query, data)
-            await db.commit()
-            db.execute(find_query)
-            results = db.fetchall()
-            print(results)
-            await interaction.response.send_message("Added to database")
-        except Exception as e:
-            print(e)
-            await interaction.response.send_message(e)
-        await db.close()
 
     @app_commands.command()
-    async def table(
+    async def add_bean(
         self,
         interaction: discord.Interaction,
     ):
-        """Show table details"""
-        db = await aiosqlite.connect("mydatabase.db")
+        """add a bean to a user"""
+        async with aiosqlite.connect("users.db") as db:
+            async with db.execute("SELECT * FROM users WHERE user_id =?", (interaction.user.id,)) as cursor:
+                result = await cursor.fetchone()
+                if not result:
+                    insert_query = ("INSERT INTO users (user_id, username, beans) VALUES(?,?,?)", (interaction.user.id, interaction.user.name, 5))
+                    await db.execute(insert_query)
+                    await db.commit()
+                    print("added to database")
+                    result = await cursor.fetchone()
+                try:
+                    db.execute("UPDATE users SET beans=beans+1 WHERE user_id =?", (interaction.user.id,))
+                    await db.commit()
+                    result = await cursor.fetchone()
+                    print("updated database")
+                    await interaction.response.send_message(result)
+                except Exception as e:
+                    print(e)
+                    await interaction.response.send_message(e)
 
-        cursor = await db.execute("SELECT * FROM users")
-        rows = await cursor.fetchall()
-
-        # Print the table details
-        if not rows:
-            print(f"Table 'users' not found")
-
-        # Close the cursor and the database connection
-        await cursor.close()
-        await db.close()
-        await interaction.response.send_message(rows)
 
 
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.
